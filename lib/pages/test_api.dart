@@ -24,6 +24,7 @@ Future<http.StreamedResponse> sendImg(String filename, String url) async {
   // request.files.add(http.MultipartFile('image',
   //     File(filename).readAsBytes().asStream(), File(filename).lengthSync(),
   //     filename: filename.split("/").last));
+
   request.fields.addAll({
     "userID": "ezz",
   });
@@ -44,6 +45,33 @@ class TestApi extends StatefulWidget {
 class _TestApiState extends State<TestApi> {
   @override
   Widget build(BuildContext context) {
+    var _coords;
+    Future<void> getStaticMapCoordinates(String address) async {
+      if (address.isEmpty) {
+        return;
+      }
+      final http.Response response = await http.get(
+        Uri.parse(
+            'https://www.mapquestapi.com/geocoding/v1/address?key=[APIKEY]&inFormat=kvp&outFormat=json&location=${address}&thumbMaps=false&maxResults=1'),
+      );
+
+      final decodedResponse = json.decode(response.body);
+      setState(() {
+        _coords = decodedResponse['results'][0]['locations'][0]['latLng'];
+      });
+    }
+
+    Widget _buildStaticMapImage() {
+      if (_coords == null) {
+        return Image.asset('assets/product.jpg');
+      }
+      return FadeInImage(
+        image: NetworkImage(
+            'https://www.mapquestapi.com/staticmap/v5/map?key=[APIKEY]&center=${_coords['lat']},${_coords['lng']}&zoom=13&type=hyb&locations=${_coords['lat']},${_coords['lng']}&size=500,300@2x'),
+        placeholder: AssetImage('assets/product.jpg'),
+      );
+    }
+
     File? _image;
     PickedFile? _pickedFile;
     final _picker = ImagePicker();
@@ -56,6 +84,8 @@ class _TestApiState extends State<TestApi> {
         });
       }
     }
+
+    Widget img;
 
     return Scaffold(
       appBar: AppBar(
@@ -78,16 +108,20 @@ class _TestApiState extends State<TestApi> {
                 //   print("done");
                 // });
 
-                _pickImage().then((value) {
-                  sendImg(_pickedFile!.path, "http://10.4.179.1:8080/upload")
-                      .then((res) {
-                    print(res);
-                  });
-                  print(_pickedFile!.path);
+                // _pickImage().then((value) {
+                //   sendImg(_pickedFile!.path, "http://10.4.179.1:8080/upload")
+                //       .then((res) {
+                //     print(res);
+                //   });
+                //   print(_pickedFile!.path);
+                // });
+
+                getStaticMapCoordinates("http://10.4.179.1:8080/upload")
+                    .then((value) {
+                  _buildStaticMapImage();
                 });
               },
             ),
-            Text(""),
           ],
         ),
       ),
